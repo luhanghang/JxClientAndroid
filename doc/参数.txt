@@ -1,0 +1,1 @@
+需要传递的消息：1、音频、视频编码类型  2、视频分辨率数字吧，容易解析。分辨率可以(width << 16) | heightcfil   11:10:12类型也可以参照，(video_codec_type << 16) | audio_codec_type

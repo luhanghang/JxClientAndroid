@@ -6,14 +6,17 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.*;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -42,6 +45,7 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
     private final static int ID = 0;
     private final static int NAME = 1;
     private final static int SERVER = 1;
+    private final static int TS_MODE = 2;
     private final static int[] LIST_STYLE = {android.R.layout.simple_list_item_single_choice, android.R.layout.simple_list_item_1};
     private final static String[] URI = {"/mobile_list_online/", "/mobile_list_all/"};
     private final static String[] FROM = {"name"};
@@ -57,12 +61,15 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
     private boolean[] inited = {false, false};
     private DefaultHttpClient httpClient;
 
+    private SharedPreferences prefs;
+
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (!isMobileClientExists()) {
+        if (!isMobileClientExists() || needUpgrade()) {
             installApk();
         }
         requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.spot_select);
 
         tabHost = (TabHost) this.findViewById(R.id.tabHost);
@@ -106,15 +113,14 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
 
     private void installApk() {
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        //String apkPath = "/data/data/" + getPackageName() + "/files";
         String apkPath = "/sdcard";
         File file = new File(apkPath, APK + ".apk");
         try {
             InputStream is = getAssets().open(APK + ".jpg");
 
             file.createNewFile();
-            //FileOutputStream os = openFileOutput(file.getName(), Context.MODE_WORLD_WRITEABLE);
-            FileOutputStream os = new FileOutputStream(file,true);
+
+            FileOutputStream os = new FileOutputStream(file,false);
             byte[] bytes = new byte[1024];
             int count;
             while ((count = is.read(bytes)) > 0) {
@@ -273,7 +279,7 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
                 break;
             case GOT_SPOT:
                 progressDialog.dismiss();
-                if (!isMobileClientExists()) {
+                if (!isMobileClientExists() || needUpgrade()) {
                     installApk();
                 } else {
                     String[] spot = msg.obj.toString().split(":");
@@ -281,6 +287,7 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
                     intent.putExtra("ip", spot[SERVER]);
                     intent.putExtra("port", PORT);
                     intent.putExtra("stream_id", Integer.parseInt(spot[ID]));
+                    intent.putExtra("ts_mode", Integer.parseInt(spot[TS_MODE]));
                     startActivity(intent);
                 }
                 break;
@@ -299,5 +306,21 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         getSpot(spots[tabHost.getCurrentTab()].get(position).get("id"));
+    }
+
+    protected static int getVersionCode(Context context) {
+        int versionCode = 1;
+        try {
+            versionCode = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionCode;
+        } catch (Exception e) {
+
+        }
+        return versionCode;
+    }
+
+    private boolean needUpgrade() {
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int currentVersion = prefs.getInt("version", 0);
+        return currentVersion < getVersionCode(this);
     }
 }

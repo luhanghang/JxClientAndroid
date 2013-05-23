@@ -60,6 +60,7 @@ public class SignInActivity extends Activity implements View.OnClickListener, Ha
         setContentView(R.layout.sign_in);
 
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        prefs.edit().putInt("version", MainActivity.getVersionCode(this)).commit();
         server = (MyEditText) findViewById(R.id.server);
         port = (MyEditText) findViewById(R.id.port);
         username = (MyEditText) findViewById(R.id.username);
