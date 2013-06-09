@@ -40,6 +40,7 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
     private final static int PORT = 7000;
     private final static int GOT_SPOTS = 0;
     private final static int GOT_SPOT = 1;
+    private final static int SERVER_ERROR = 2;
     private final static int ONLINE = 0;
     private final static int ALL = 1;
     private final static int ID = 0;
@@ -212,18 +213,19 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
                 String url = SignInActivity.BASE_URL + "/spots" + URI[tabHost.getCurrentTab()] + userId;
                 HttpGet httpGet = new HttpGet(url);
                 String _spots = "";
+                Message message = new Message();
                 try {
                     HttpResponse httpResponse = httpClient.execute(httpGet);
                     if (HttpStatus.SC_OK == httpResponse.getStatusLine().getStatusCode()) {
                         _spots = EntityUtils.toString(httpResponse.getEntity(), HTTP.UTF_8);
                         //Log.e("SPOTS",_spots);
+                        message.what = GOT_SPOTS;
+                        message.obj = _spots;
                     }
                 } catch (Exception e) {
                     Log.e(SignInActivity.TAG, "exception", e);
+                    message.what = SERVER_ERROR;
                 }
-                Message message = new Message();
-                message.what = GOT_SPOTS;
-                message.obj = _spots;
                 handler.sendMessage(message);
             }
         }).start();
@@ -240,17 +242,18 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
                 String url = SignInActivity.BASE_URL + "/spots/mobile_get/" + id;
                 HttpGet httpGet = new HttpGet(url);
                 String _spot = "";
+                Message message = new Message();
                 try {
                     HttpResponse httpResponse = httpClient.execute(httpGet);
                     if (HttpStatus.SC_OK == httpResponse.getStatusLine().getStatusCode()) {
                         _spot = EntityUtils.toString(httpResponse.getEntity(), HTTP.UTF_8);
+                        message.what = GOT_SPOT;
+                        message.obj = _spot;
                     }
                 } catch (Exception e) {
                     Log.e(SignInActivity.TAG, "exception", e);
+                    message.what = SERVER_ERROR;
                 }
-                Message message = new Message();
-                message.what = GOT_SPOT;
-                message.obj = _spot;
                 handler.sendMessage(message);
             }
         }).start();
@@ -259,6 +262,10 @@ public class MainActivity extends Activity implements Handler.Callback, TabHost.
     @Override
     public boolean handleMessage(Message msg) {
         switch (msg.what) {
+            case SERVER_ERROR:
+                progressDialog.dismiss();
+                Toast.makeText(this, getString(R.string.server_error), Toast.LENGTH_LONG).show();
+                break;
             case GOT_SPOTS:
                 String spotString = msg.obj.toString();
                 int tabIndex = tabHost.getCurrentTab();
